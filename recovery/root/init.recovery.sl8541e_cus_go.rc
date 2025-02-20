@@ -1,0 +1,191 @@
+#add for board init.rc for recovery mode
+#import /init.recovery.environ.rc
+import /init.recovery.common.rc
+#import /init.recovery.zygote.rc
+import /vendor/etc/init/android.hardware.gatekeeper@1.0-service.rc
+import /vendor/etc/init/android.hardware.keymaster@3.0-service.rc
+import /vendor/etc/init/rpmbserver_androido.rc
+import /vendor/etc/init/storageproxyd_androidp.rc
+
+#import /init.recovery.cali.rc
+#import /system/etc/init/uncrypt.rc
+#import /system/etc/init/vdc.rc
+
+service healthd /system/bin/healthd -r
+    critical
+    seclabel u:r:healthd:s0
+
+service sys_keystore /system/bin/keystore /data/misc/keystore
+    class main
+    user keystore
+    group keystore drmrpc readproc root system
+    seclabel u:r:recovery:s0
+
+service ven_gatekeeper-1-0 /vendor/bin/hw/android.hardware.gatekeeper@1.0-service
+    user root
+    group root
+    disabled
+    seclabel u:r:recovery:s0
+
+service sys_hwservicemanager /system/bin/hwservicemanager
+    user root
+    group root
+    setenv PATH /system/bin:/system/bin/hw
+    setenv LD_LIBRARY_PATH /system/lib:/system/lib/hw:/vendor/lib:/vendor/lib/hw
+    onrestart setprop hwservicemanager.ready false
+    onrestart class_restart hal
+    onrestart class_restart early_hal
+    disabled
+    oneshot
+    seclabel u:r:vold:s0
+
+service sys_servicemanager /system/bin/servicemanager
+    user root
+    group root readproc
+    disabled
+    seclabel u:r:recovery:s0
+
+service ven_keymaster-3-0 /vendor/bin/hw/android.hardware.keymaster@3.0-service
+    user root
+    group root
+    setenv PATH /vendor/bin:/system/bin
+    setenv LD_LIBRARY_PATH /system/lib:/system/lib/hw:/vendor/lib:/vendor/lib/hw
+    disabled
+    oneshot
+    seclabel u:r:vold:s0
+
+service sys_vold /system/bin/vold \
+        --blkid_context=u:r:blkid:s0 --blkid_untrusted_context=u:r:blkid_untrusted:s0 \
+        --fsck_context=u:r:fsck:s0 --fsck_untrusted_context=u:r:fsck_untrusted:s0
+    socket vold stream 0660 root mount
+    socket cryptd stream 0660 root mount
+    setenv PATH /system/bin:/system/bin/hw
+    setenv LD_LIBRARY_PATH /system/lib:/system/lib/hw:/vendor/lib:/vendor/lib/hw
+    disabled
+    oneshot
+
+service ven_vndservicemanager /vendor/bin/vndservicemanager /dev/vndbinder
+    user root
+    group root
+    setenv PATH /vendor/bin:/system/bin:/system/bin/hw
+    setenv LD_LIBRARY_PATH /system/lib:/system/lib/hw:/vendor/lib:/vendor/lib/hw
+    disabled
+    oneshot
+    seclabel u:r:vold:s0
+
+service ven_zram /vendor/bin/zram.sh
+    disabled
+    oneshot
+    seclabel u:object_r:zram_exec:s0
+
+on property:ro.crypto.type=file
+    start keymaster-3-0
+    start gatekeeper-1-0
+    start servicemanager
+
+on post-fs
+    start modulesdriver
+
+service modulesdriver /sbin/modulesdriver.sh
+    oneshot
+    disabled
+    user root
+    group root
+    seclabel u:r:recovery:s0
+							
+on init
+    start healthd
+
+    chown system root /proc/cpwcn/wdtirq	
+    chmod 766 /proc/cpwcn/wdtirq
+
+on fs
+    install_keyring
+    
+    mkdir /data/misc/bluedroid 0770 bluetooth net_bt_stack
+    mkdir /data/misc/bluetooth 0770 system system
+    
+    mkdir /data/misc/bluedroid 0770 bluetooth net_bt_stack
+    mkdir /data/misc/bluetooth 0770 system system
+    copy /system/etc/bluetooth/bt_stack.conf /data/misc/bluedroid/bt_stack.conf
+    chown bluetooth system /data/misc/bluedroid/bt_stack.conf
+    chmod 0640 /data/misc/bluedroid/bt_stack.conf
+
+    chmod 666 /sys/module/shub_core/parameters/gryo_firms
+    chmod 666 /sys/module/shub_core/parameters/acc_firms
+    chmod 666 /sys/module/shub_core/parameters/mag_firms
+    chmod 666 /sys/module/shub_core/parameters/pressure_firms
+    chmod 666 /sys/module/shub_core/parameters/light_firms
+    chmod 666 /sys/module/shub_core/parameters/prox_firms
+    chmod 666 /sys/module/firmware_class/parameters/path
+    chmod 666 /sys/module/shub_core/parameters/sensor_fusion_mode
+
+    # Ylog dir on /data partition
+    mkdir /data/vendor 0751 root root
+    mkdir /data/vendor/local 0751 root root
+
+    # slogmodem config dir
+    mkdir /data/vendor/ylog 0770 shell system
+    mkdir /data/vendor/local/slogmodem 0770 shell system
+    mkdir /data/vendor/local/mlogservice 0770 shell system
+    mkdir /mnt/vendor/sensorhub 0777 system root
+    mkdir /mnt/vendor/productinfo 0771 system root
+    mkdir /mnt/vendor/productinfo/sensor_calibration_data 0770 system root
+    mkdir /data/vendor/local/otpdata 0777 system root
+
+on post-fs-data
+    setprop fpga.target.enable 1
+    setprop debug.delaytime.min 10
+    setprop debug.delaytime.mid 100
+    setprop debug.delaytime.max 1000
+    setprop debug.android_watchdog.disable 1
+
+#modify permission for voicetrigger dev
+    chown system  audio /dev/rt5512
+    chmod 660     /dev/rt5512
+
+#add for sunwave fingerprint
+    chmod 660 /dev/sunwave_fp
+    chown system system /dev/sunwave_fp
+
+#add for fingerprint app function
+    mkdir /data/sprd 0770 system system
+    mkdir /data/sprd/launchappdata 0770 system system
+    mkdir /data/sprd/applock 0770 system system
+
+    insmod /lib/modules/sprdbt_tty.ko
+    insmod /lib/modules/sprd_fm.ko
+
+ifeq ($(strip $(NEED_MAPGOO_FIREWALL)),true) 
+    mkdir /system/bin/firewall_script 0770 system system
+endif
+
+#modify permission for fm sys file
+    chmod 666 /sys/class/QN8027/QN8027/power_state
+    chmod 666 /sys/class/QN8027/QN8027/tunetoch
+
+    chmod 666 /sys/class/misc/sprd_7sreset/ext_rst_mode
+
+#modify permission
+    chmod 666 /sys/class/module_data/module_data/app
+    chmod 666 /sys/class/module_data/module_data/data
+
+#modify permission for qc_gpio
+    chmod 666 /dev/qc_gpio
+    
+#modify permission for ttyS1
+    chmod 777 /dev/ttyS1	
+    
+    chmod 666 /sys/class/backlight/sprd_backlight/brightness
+	chmod 666 /sys/class/backlight/sprd_backlight/bl_power
+    
+# modify for AR navigation dynamic FPS    
+    chmod 777 /sys/devices/virtual/misc/sprd_image/AR_navi_ctl    
+    chmod 666 /sys/devices/virtual/QN8027/QN8027/speaker_en
+
+on boot
+
+# block I/O vm.dirty parameters
+    write /proc/sys/vm/dirty_background_bytes 4194304
+    write /proc/sys/vm/dirty_bytes  52428800
+    cp /system/app/.vechileMatics.properties  /mnt/sdcard
