@@ -6,6 +6,8 @@ import /vendor/etc/init/android.hardware.gatekeeper@1.0-service.rc
 import /vendor/etc/init/android.hardware.keymaster@3.0-service.rc
 import /vendor/etc/init/rpmbserver_androido.rc
 import /vendor/etc/init/storageproxyd_androidp.rc
+import /vendor/etc/init/vndservicemanager.rc
+import /vendor/etc/init/zram.rc
 
 #import /init.recovery.cali.rc
 #import /system/etc/init/uncrypt.rc
@@ -19,12 +21,6 @@ service sys_keystore /system/bin/keystore /data/misc/keystore
     class main
     user keystore
     group keystore drmrpc readproc root system
-    seclabel u:r:recovery:s0
-
-service ven_gatekeeper-1-0 /vendor/bin/hw/android.hardware.gatekeeper@1.0-service
-    user root
-    group root
-    disabled
     seclabel u:r:recovery:s0
 
 service sys_hwservicemanager /system/bin/hwservicemanager
@@ -45,14 +41,14 @@ service sys_servicemanager /system/bin/servicemanager
     disabled
     seclabel u:r:recovery:s0
 
-service ven_keymaster-3-0 /vendor/bin/hw/android.hardware.keymaster@3.0-service
+
+service wait_for_keymaster /system/bin/wait_for_keymaster
     user root
     group root
-    setenv PATH /vendor/bin:/system/bin
-    setenv LD_LIBRARY_PATH /system/lib:/system/lib/hw:/vendor/lib:/vendor/lib/hw
+    setenv LD_LIBRARY_PATH /vendor/lib64:/vendor/lib:/system/lib64:/system/lib:/sbin
     disabled
     oneshot
-    seclabel u:r:vold:s0
+    seclabel u:r:recovery:s0
 
 service sys_vold /system/bin/vold \
         --blkid_context=u:r:blkid:s0 --blkid_untrusted_context=u:r:blkid_untrusted:s0 \
@@ -64,24 +60,38 @@ service sys_vold /system/bin/vold \
     disabled
     oneshot
 
-service ven_vndservicemanager /vendor/bin/vndservicemanager /dev/vndbinder
-    user root
-    group root
-    setenv PATH /vendor/bin:/system/bin:/system/bin/hw
+#service name must be < 16
+service ven_rpmbproxyd /vendor/bin/sprdstorageproxyd -f rpmb -d /dev/trusty-ipc-dev0 -p /data/sprd_ss -r /dev/block/mmcblk0rpmb
+    class core
+    group system
+    setenv PATH /vendor/bin:/system/bin
     setenv LD_LIBRARY_PATH /system/lib:/system/lib/hw:/vendor/lib:/vendor/lib/hw
-    disabled
-    oneshot
-    seclabel u:r:vold:s0
+    seclabel u:r:tee:s0
 
-service ven_zram /vendor/bin/zram.sh
-    disabled
-    oneshot
-    seclabel u:object_r:zram_exec:s0
+service ven_storagensproxyd /vendor/bin/sprdstorageproxyd -f ns -d /dev/trusty-ipc-dev0 -p /data/sprd_ss -r /dev/block/mmcblk0rpmb
+    class late_start
+    group system
+    setenv PATH /vendor/bin:/system/bin
+    setenv LD_LIBRARY_PATH /system/lib:/system/lib/hw:/vendor/lib:/vendor/lib/hw
+    seclabel u:r:tee:s0
+
+on property:sprd.storageproxyd.enabled=1
+    mkdir /data/sprd_ss 0770 system system
+    start ven_rpmbproxyd
+    start ven_storagensproxyd
+
+on property:hwservicemanager.ready=true
+    start ven_gatekeeper-1-0
+    start ven_keymaster-4-1
+    setprop sprd.storageproxyd.enabled 1
 
 on property:ro.crypto.type=file
-    start keymaster-3-0
-    start gatekeeper-1-0
-    start servicemanager
+    start ven_keymaster-3-0
+    start ven_gatekeeper-1-0
+    start sys_servicemanager
+
+on late-fs
+    exec_start wait_for_keymaster
 
 on post-fs
     start modulesdriver
@@ -101,6 +111,7 @@ on init
 
 on fs
     install_keyring
+    setprop crypto.ready 1
     
     mkdir /data/misc/bluedroid 0770 bluetooth net_bt_stack
     mkdir /data/misc/bluetooth 0770 system system

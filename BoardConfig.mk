@@ -53,7 +53,8 @@ TARGET_ARCH := arm
 TARGET_ARCH_VARIANT := armv7-a-neon
 TARGET_CPU_ABI := armeabi-v7a
 TARGET_CPU_ABI2 := armeabi
-TARGET_CPU_VARIANT := cortex-a53
+TARGET_CPU_VARIANT := generic
+TARGET_CPU_VARIANT_RUNTIME := cortex-a53
 #TARGET_CPU_VARIANT := armv8-a
 
 TARGET_CPU_SMP := true
@@ -99,7 +100,7 @@ BOARD_BUILD_SYSTEM_ROOT_IMAGE := false
 
 # Workaround for error copying vendor files to recovery ramdisk
 TARGET_COPY_OUT_VENDOR := vendor
-TARGET_COPY_OUT_PRODUCT := productinfo
+TARGET_COPY_OUT_PRODUCT := product
 
 # MTP
 TW_HAS_MTP := true
@@ -184,6 +185,7 @@ TW_PREPARE_DATA_MEDIA_EARLY := true
 # Additional binaries & libraries needed for recovery
 TARGET_RECOVERY_DEVICE_MODULES += \
     libkeymaster3 \
+    sprdstorageproxyd \
     libpuresoftkeymasterdevice
 #    ashmemd_aidl_interface-cpp \
 #    libashmemd_client

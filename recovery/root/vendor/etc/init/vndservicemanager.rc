@@ -1,0 +1,9 @@
+service ven_vndservicemanager /vendor/bin/vndservicemanager /dev/vndbinder
+    class core
+    user system
+    group system readproc
+    setenv PATH /vendor/bin:/system/bin:/system/bin/hw
+    setenv LD_LIBRARY_PATH /system/lib:/system/lib/hw:/vendor/lib:/vendor/lib/hw
+    disabled
+    oneshot
+    seclabel u:r:vold:s0

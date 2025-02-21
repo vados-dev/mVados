@@ -2,5 +2,7 @@ service ven_keymaster-3-0 /vendor/bin/hw/android.hardware.keymaster@3.0-service
     class early_hal
     user root
     group root drmrpc
+    setenv PATH /vendor/bin:/system/bin
+    setenv LD_LIBRARY_PATH /system/lib:/system/lib/hw:/vendor/lib:/vendor/lib/hw
     disabled
-    seclabel u:r:recovery:s0
+    seclabel u:r:vold:s0

@@ -16,9 +16,13 @@ on property:sprd.storageproxyd.enabled=1
 service ven_rpmbproxyd /vendor/bin/sprdstorageproxyd -f rpmb -d /dev/trusty-ipc-dev0 -p /data/sprd_ss -r /dev/block/mmcblk0rpmb
     class core
     group system
+    setenv PATH /vendor/bin:/system/bin
+    setenv LD_LIBRARY_PATH /system/lib:/system/lib/hw:/vendor/lib:/vendor/lib/hw
     seclabel u:r:tee:s0
 
 service ven_storagensproxyd /vendor/bin/sprdstorageproxyd -f ns -d /dev/trusty-ipc-dev0 -p /data/sprd_ss -r /dev/block/mmcblk0rpmb
     class late_start
     group system
+    setenv PATH /vendor/bin:/system/bin
+    setenv LD_LIBRARY_PATH /system/lib:/system/lib/hw:/vendor/lib:/vendor/lib/hw
     seclabel u:r:tee:s0

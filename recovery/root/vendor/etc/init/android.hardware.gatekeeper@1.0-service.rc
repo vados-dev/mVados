@@ -2,5 +2,7 @@ service ven_gatekeeper-1-0 /vendor/bin/hw/android.hardware.gatekeeper@1.0-servic
     class hal
     user root
     group root
+    setenv PATH /vendor/bin:/system/bin
+    setenv LD_LIBRARY_PATH /system/lib:/system/lib/hw:/vendor/lib:/vendor/lib/hw
     disabled
     seclabel u:r:recovery:s0

@@ -15,3 +15,16 @@ PRODUCT_COPY_FILES += \
 PRODUCT_PACKAGES += \
     zram.sh
 
+# Additional Libraries
+TARGET_RECOVERY_DEVICE_MODULES += \
+    libkeymaster3 \
+    libpuresoftkeymasterdevice \
+    sprdstorageproxyd \
+    wait_for_keymaster
+
+RECOVERY_BINARY_SOURCE_FILES += \
+    $(TARGET_OUT_EXECUTABLES)/wait_for_keymaster
+
+RECOVERY_LIBRARY_SOURCE_FILES += \
+    $(TARGET_OUT_SHARED_LIBRARIES)/libkeymaster3.so \
+    $(TARGET_OUT_SHARED_LIBRARIES)/libpuresoftkeymasterdevice.so
